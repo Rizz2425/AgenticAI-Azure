@@ -28,6 +28,9 @@ jobs:
           echo "VM_IP=$IP" >> $GITHUB_ENV
         working-directory: ./terraform
 
+      - name: Wait for VM to be ready
+        run: sleep 120
+
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v0.1.10
         with:
