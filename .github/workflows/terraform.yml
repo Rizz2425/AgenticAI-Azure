@@ -20,10 +20,12 @@ jobs:
         uses: hashicorp/setup-terraform@v2
 
       - name: Terraform Init & Apply
+        id: tf_apply
         run: |
           terraform init
           terraform apply -auto-approve
-          echo "VM_IP=$(terraform output -raw instance_ip)" >> $GITHUB_ENV
+          IP=$(terraform output -raw instance_ip | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | head -n 1)
+          echo "VM_IP=$IP" >> $GITHUB_ENV
         working-directory: ./terraform
 
       - name: Deploy to EC2 via SSH
