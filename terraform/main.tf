@@ -52,7 +52,7 @@ resource "aws_instance" "django_server" {
   }
 }
 
-# 3. Output (VM ka IP address dikhane ke liye)
+# 3. Output (For showing the VM IP Adress)
 output "instance_ip" {
   value = aws_instance.django_server.public_ip
 }

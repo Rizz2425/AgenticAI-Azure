@@ -2,12 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Dependencies install karein
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pura code copy karein
 COPY . .
 
-# Django server start karein
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
