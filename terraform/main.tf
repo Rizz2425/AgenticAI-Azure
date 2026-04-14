@@ -43,7 +43,7 @@ resource "azurerm_public_ip" "django_public_ip" {
 }
 
 
-# 5. Network Interface (Isme NSG link hona zaroori hai)
+# 5. Network Interface (Isi mein NSG link kar diya hai)
 resource "azurerm_network_interface" "django_nic" {
   name                = "django-nic"
   location            = azurerm_resource_group.django_rg.location
@@ -57,7 +57,7 @@ resource "azurerm_network_interface" "django_nic" {
   }
 }
 
-# 6. Security Group (SSH aur Django ke liye)
+# 6. Security Group
 resource "azurerm_network_security_group" "django_nsg" {
   name                = "django-nsg"
   location            = azurerm_resource_group.django_rg.location
@@ -88,15 +88,7 @@ resource "azurerm_network_security_group" "django_nsg" {
   }
 }
 
-# YE WALI LINE ZAROORI HAI: NIC ko NSG se jodne ke liye
-resource "azurerm_network_interface_security_group_assignment" "nic_nsg_link" {
-  network_interface_id      = azurerm_network_interface.django_nic.id
-  network_security_group_id = azurerm_network_security_group.django_nsg.id
-}
-
-# ... (VM aur baaki code same rahega)
-
-# 7. Virtual Machine (Ubuntu)
+# 7. Virtual Machine (B2ats_v2 use kar rahe hain)
 resource "azurerm_linux_virtual_machine" "django_vm" {
   name                = "DjangoServer-Azure"
   resource_group_name = azurerm_resource_group.django_rg.name
@@ -109,7 +101,7 @@ resource "azurerm_linux_virtual_machine" "django_vm" {
 
   admin_ssh_key {
     username   = "ubuntu"
-    public_key = file("azure_key.pub") # Ab ye terraform folder ke andar se uthayega
+    public_key = file("azure_key.pub")
   }
 
   os_disk {
