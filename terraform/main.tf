@@ -33,12 +33,13 @@ resource "azurerm_subnet" "django_subnet" {
   address_prefixes     = ["10.0.2.0/24"]
 }
 
-# 4. Public IP (Taaki hum browser se access kar sakein)
+# 4. Public IP 
 resource "azurerm_public_ip" "django_public_ip" {
   name                = "django-public-ip"
   resource_group_name = azurerm_resource_group.django_rg.name
   location            = azurerm_resource_group.django_rg.location
-  allocation_method   = "Dynamic"
+  allocation_method   = "Static"   
+  sku                 = "Standard"
 }
 
 # 5. Network Interface (Isi mein NSG link kar diya hai)
