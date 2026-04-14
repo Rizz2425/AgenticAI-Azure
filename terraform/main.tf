@@ -42,7 +42,8 @@ resource "azurerm_public_ip" "django_public_ip" {
   sku                 = "Standard"
 }
 
-# 5. Network Interface (Isi mein NSG link kar diya hai)
+
+# 5. Network Interface (Isme NSG link hona zaroori hai)
 resource "azurerm_network_interface" "django_nic" {
   name                = "django-nic"
   location            = azurerm_resource_group.django_rg.location
@@ -56,7 +57,7 @@ resource "azurerm_network_interface" "django_nic" {
   }
 }
 
-# 6. Security Group
+# 6. Security Group (SSH aur Django ke liye)
 resource "azurerm_network_security_group" "django_nsg" {
   name                = "django-nsg"
   location            = azurerm_resource_group.django_rg.location
@@ -86,6 +87,14 @@ resource "azurerm_network_security_group" "django_nsg" {
     destination_address_prefix = "*"
   }
 }
+
+# YE WALI LINE ZAROORI HAI: NIC ko NSG se jodne ke liye
+resource "azurerm_network_interface_security_group_assignment" "nic_nsg_link" {
+  network_interface_id      = azurerm_network_interface.django_nic.id
+  network_security_group_id = azurerm_network_security_group.django_nsg.id
+}
+
+# ... (VM aur baaki code same rahega)
 
 # 7. Virtual Machine (Ubuntu)
 resource "azurerm_linux_virtual_machine" "django_vm" {
