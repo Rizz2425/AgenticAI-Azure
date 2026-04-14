@@ -27,7 +27,7 @@ jobs:
           terraform init
           terraform apply -auto-approve
           # Azure mein IP nikalne ka syntax
-          IP=$(terraform output -raw instance_ip)
+          IP=$(terraform output -raw instance_ip | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b")
           echo "VM_IP=$IP" >> $GITHUB_ENV
         working-directory: ./terraform
 
