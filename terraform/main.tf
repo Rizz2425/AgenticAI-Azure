@@ -41,7 +41,7 @@ resource "azurerm_public_ip" "django_public_ip" {
   allocation_method   = "Dynamic"
 }
 
-# 5. Network Interface
+# 5. Network Interface (Isi mein NSG link kar diya hai)
 resource "azurerm_network_interface" "django_nic" {
   name                = "django-nic"
   location            = azurerm_resource_group.django_rg.location
@@ -55,7 +55,7 @@ resource "azurerm_network_interface" "django_nic" {
   }
 }
 
-# 6. Security Group (Port 22 aur 8000 allow karne ke liye)
+# 6. Security Group
 resource "azurerm_network_security_group" "django_nsg" {
   name                = "django-nsg"
   location            = azurerm_resource_group.django_rg.location
@@ -86,18 +86,12 @@ resource "azurerm_network_security_group" "django_nsg" {
   }
 }
 
-# NIC ko NSG se connect karna
-resource "azurerm_network_interface_security_group_assignment" "example" {
-  network_interface_id      = azurerm_network_interface.django_nic.id
-  network_security_group_id = azurerm_network_security_group.django_nsg.id
-}
-
 # 7. Virtual Machine (Ubuntu)
 resource "azurerm_linux_virtual_machine" "django_vm" {
   name                = "DjangoServer-Azure"
   resource_group_name = azurerm_resource_group.django_rg.name
   location            = azurerm_resource_group.django_rg.location
-  size                = "Standard_B1s" # Free tier eligible
+  size                = "Standard_B1s"
   admin_username      = "ubuntu"
   network_interface_ids = [
     azurerm_network_interface.django_nic.id,
@@ -105,7 +99,7 @@ resource "azurerm_linux_virtual_machine" "django_vm" {
 
   admin_ssh_key {
     username   = "ubuntu"
-    public_key = file("azure_key.pub")
+    public_key = file("azure_key.pub") # Ab ye terraform folder ke andar se uthayega
   }
 
   os_disk {
@@ -120,7 +114,6 @@ resource "azurerm_linux_virtual_machine" "django_vm" {
     version   = "latest"
   }
 
-  # Docker install karne ki script
   user_data = base64encode(<<-EOF
               #!/bin/bash
               sudo apt-get update -y
