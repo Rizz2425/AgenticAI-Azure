@@ -1,6 +1,4 @@
-name: "Terraform & Docker Deploy"
-
-#for showing to arhan sir
+name: "Azure Terraform & Docker Deploy"
 
 on:
   push:
@@ -11,9 +9,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -26,14 +26,15 @@ jobs:
         run: |
           terraform init
           terraform apply -auto-approve
-          IP=$(terraform output -raw instance_ip | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | head -n 1)
+          # Azure mein IP nikalne ka syntax
+          IP=$(terraform output -raw instance_ip)
           echo "VM_IP=$IP" >> $GITHUB_ENV
         working-directory: ./terraform
 
-      - name: Wait for VM to be ready
-        run: sleep 90
+      - name: Wait for VM
+        run: sleep 60
 
-      - name: Deploy to EC2 via SSH
+      - name: Deploy to Azure VM via SSH
         uses: appleboy/ssh-action@v0.1.10
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -44,9 +45,9 @@ jobs:
           envs: GROQ_API_KEY
           script: |
             cd /home/ubuntu
-            sudo rm -rf AgenticAI-AWS
+            sudo rm -rf AgenticAI-Azure || true
             git clone https://github.com/${{ github.repository }}.git
-            cd AgenticAI-AWS
+            cd AgenticAI-Azure
             sudo docker build -t django-app .
             sudo docker stop django-container || true
             sudo docker rm django-container || true

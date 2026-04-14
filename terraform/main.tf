@@ -1,58 +1,137 @@
-provider "aws" {
-  region = "ap-south-1" # Mumbai Region
-}
-
-# 1. Security Group (Firewall)
-resource "aws_security_group" "django_sg" {
-  name        = "django-sg"
-  description = "Allow SSH and Django port"
-
-  # SSH Access
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # Django Web Port
-  ingress {
-    from_port   = 8000
-    to_port     = 8000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # Outbound Rules (Internet Access)
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+# 1. Azure Provider Setup
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
+    }
   }
 }
 
-# 2. EC2 Instance (Virtual Machine)
-resource "aws_instance" "django_server" {
-  ami           = "ami-0dee22c13ea7a9a67" 
-  instance_type = "t3.micro"
-  key_name      = "terraform-key"
-  vpc_security_group_ids = [aws_security_group.django_sg.id]
+provider "azurerm" {
+  features {}
+}
 
-  user_data = <<-EOF
+# 2. Resource Group (Ek container saari resources ke liye)
+resource "azurerm_resource_group" "django_rg" {
+  name     = "django-ai-resources"
+  location = "Central India" # Mumbai ke pass Azure ka region
+}
+
+# 3. Virtual Network Setup
+resource "azurerm_virtual_network" "django_vnet" {
+  name                = "django-network"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.django_rg.location
+  resource_group_name = azurerm_resource_group.django_rg.name
+}
+
+resource "azurerm_subnet" "django_subnet" {
+  name                 = "internal"
+  resource_group_name  = azurerm_resource_group.django_rg.name
+  virtual_network_name = azurerm_virtual_network.django_vnet.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
+# 4. Public IP (Taaki hum browser se access kar sakein)
+resource "azurerm_public_ip" "django_public_ip" {
+  name                = "django-public-ip"
+  resource_group_name = azurerm_resource_group.django_rg.name
+  location            = azurerm_resource_group.django_rg.location
+  allocation_method   = "Dynamic"
+}
+
+# 5. Network Interface
+resource "azurerm_network_interface" "django_nic" {
+  name                = "django-nic"
+  location            = azurerm_resource_group.django_rg.location
+  resource_group_name = azurerm_resource_group.django_rg.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.django_subnet.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.django_public_ip.id
+  }
+}
+
+# 6. Security Group (Port 22 aur 8000 allow karne ke liye)
+resource "azurerm_network_security_group" "django_nsg" {
+  name                = "django-nsg"
+  location            = azurerm_resource_group.django_rg.location
+  resource_group_name = azurerm_resource_group.django_rg.name
+
+  security_rule {
+    name                       = "SSH"
+    priority                   = 1001
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "Django"
+    priority                   = 1002
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "8000"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+}
+
+# NIC ko NSG se connect karna
+resource "azurerm_network_interface_security_group_assignment" "example" {
+  network_interface_id      = azurerm_network_interface.django_nic.id
+  network_security_group_id = azurerm_network_security_group.django_nsg.id
+}
+
+# 7. Virtual Machine (Ubuntu)
+resource "azurerm_linux_virtual_machine" "django_vm" {
+  name                = "DjangoServer-Azure"
+  resource_group_name = azurerm_resource_group.django_rg.name
+  location            = azurerm_resource_group.django_rg.location
+  size                = "Standard_B1s" # Free tier eligible
+  admin_username      = "ubuntu"
+  network_interface_ids = [
+    azurerm_network_interface.django_nic.id,
+  ]
+
+  admin_ssh_key {
+    username   = "ubuntu"
+    public_key = file("azure_key.pub")
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+
+  # Docker install karne ki script
+  user_data = base64encode(<<-EOF
               #!/bin/bash
               sudo apt-get update -y
               sudo apt-get install -y docker.io
               sudo systemctl start docker
               sudo systemctl enable docker
               EOF
-
-  tags = {
-    Name = "DjangoServer-AWS"
-  }
+  )
 }
 
-# 3. Output (For showing the VM IP Adress)
+# 8. Output IP Address
 output "instance_ip" {
-  value = aws_instance.django_server.public_ip
+  value = azurerm_public_ip.django_public_ip.ip_address
 }
