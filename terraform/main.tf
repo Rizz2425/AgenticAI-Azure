@@ -92,7 +92,7 @@ resource "azurerm_linux_virtual_machine" "django_vm" {
   name                = "DjangoServer-Azure"
   resource_group_name = azurerm_resource_group.django_rg.name
   location            = azurerm_resource_group.django_rg.location
-  size                = "Standard_B1s"
+  size                = "Standard_B2ats_v2"
   admin_username      = "ubuntu"
   network_interface_ids = [
     azurerm_network_interface.django_nic.id,
